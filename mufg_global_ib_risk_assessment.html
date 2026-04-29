@@ -1,0 +1,356 @@
+
+<style>
+  .dash { font-family: var(--font-sans); padding: 1rem 0; }
+  .section-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-tertiary); margin: 0 0 8px; }
+  .tab-row { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab { padding: 6px 14px; font-size: 13px; font-weight: 400; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); cursor: pointer; color: var(--color-text-secondary); background: transparent; }
+  .tab.active { background: var(--color-background-info); color: var(--color-text-info); border-color: var(--color-border-info); font-weight: 500; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
+  .metric-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .metric { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.85rem 1rem; }
+  .m-label { font-size: 11px; color: var(--color-text-tertiary); margin: 0 0 4px; }
+  .m-val { font-size: 22px; font-weight: 500; color: var(--color-text-primary); margin: 0; line-height: 1.2; }
+  .m-sub { font-size: 11px; color: var(--color-text-secondary); margin: 2px 0 0; }
+  .risk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 1rem; }
+  .risk-card { border-radius: var(--border-radius-md); padding: 12px 14px; border-left: 3px solid; }
+  .risk-card.critical { border-color: #E24B4A; background: #FCEBEB; }
+  .risk-card.high { border-color: #BA7517; background: #FAEEDA; }
+  .risk-card.medium { border-color: #378ADD; background: #E6F1FB; }
+  .risk-card.low { border-color: #639922; background: #EAF3DE; }
+  @media (prefers-color-scheme: dark) {
+    .risk-card.critical { background: #501313; }
+    .risk-card.high { background: #412402; }
+    .risk-card.medium { background: #042C53; }
+    .risk-card.low { background: #173404; }
+  }
+  .rc-title { font-size: 13px; font-weight: 500; margin: 0 0 4px; color: var(--color-text-primary); }
+  .rc-body { font-size: 12px; color: var(--color-text-secondary); margin: 0 0 6px; line-height: 1.5; }
+  .rc-fine { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); }
+  .badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px; margin-left: 6px; }
+  .badge.crit { background: #F7C1C1; color: #791F1F; }
+  .badge.hi { background: #FAC775; color: #633806; }
+  .badge.med { background: #B5D4F4; color: #0C447C; }
+  .badge.lo { background: #C0DD97; color: #27500A; }
+  .entity-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  .entity-table th { text-align: left; font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); padding: 0 8px 6px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .entity-table td { padding: 7px 8px 7px 0; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-secondary); vertical-align: top; line-height: 1.45; }
+  .entity-table td:first-child { color: var(--color-text-primary); font-weight: 500; white-space: nowrap; }
+  .pill { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 8px; font-weight: 400; }
+  .p-crit { background: #F7C1C1; color: #791F1F; }
+  .p-hi { background: #FAC775; color: #633806; }
+  .p-med { background: #B5D4F4; color: #0C447C; }
+  .p-lo { background: #C0DD97; color: #27500A; }
+  .heat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 10px; }
+  .heat-cell { border-radius: 4px; padding: 8px 6px; text-align: center; font-size: 11px; font-weight: 500; cursor: default; }
+  .h5 { background: #F7C1C1; color: #791F1F; }
+  .h4 { background: #FAC775; color: #633806; }
+  .h3 { background: #FAF0B4; color: #6B5C00; }
+  .h2 { background: #C0DD97; color: #27500A; }
+  .h1 { background: #D3D1C7; color: #444441; }
+  .axis-label { font-size: 10px; color: var(--color-text-tertiary); text-align: center; margin-top: 4px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .source-note { font-size: 10px; color: var(--color-text-tertiary); margin-top: 12px; line-height: 1.5; }
+</style>
+
+<div class="dash">
+  <h2 style="sr-only">MUFG and global investment bank regulatory risk assessment dashboard</h2>
+
+  <div class="tab-row">
+    <button class="tab active" onclick="showPanel('p20')">Global IB — 20 years</button>
+    <button class="tab" onclick="showPanel('p5')">MUFG — 5 years</button>
+    <button class="tab" onclick="showPanel('pheat')">MUFG risk heat map</button>
+    <button class="tab" onclick="showPanel('pentity')">Risk by entity</button>
+  </div>
+
+  <!-- PANEL 1: Global 20 years -->
+  <div id="p20" class="panel active">
+    <p class="section-label">Global investment bank enforcement landscape — 2005 to 2025</p>
+    <div class="metric-row">
+      <div class="metric"><p class="m-label">AML / sanctions fines (21st c.)</p><p class="m-val">$45.7bn</p><p class="m-sub">85 AML cases + 26 sanctions cases</p></div>
+      <div class="metric"><p class="m-label">LIBOR / benchmark manipulation</p><p class="m-val">$12bn+</p><p class="m-sub">Barclays, DB, RBS, UBS, Citi, JPM</p></div>
+      <div class="metric"><p class="m-label">FX manipulation fines</p><p class="m-val">$11bn+</p><p class="m-sub">"The Cartel" — EUR/USD rigging</p></div>
+      <div class="metric"><p class="m-label">Off-channel comms (SEC/CFTC)</p><p class="m-val">$3.6bn</p><p class="m-sub">100+ firms since Dec 2021</p></div>
+    </div>
+
+    <div style="position: relative; width: 100%; height: 320px; margin-bottom: 1.5rem;">
+      <canvas id="chart20" role="img" aria-label="Bar chart of estimated global enforcement fines by category for investment banks 2005 to 2025">AML/Sanctions $45.7bn, Benchmark manipulation $12bn, FX manipulation $11bn, Consumer/mortgage $40bn, Off-channel comms $3.6bn, Market abuse $8bn, Regulatory reporting $2bn, Operational risk $4bn.</canvas>
+    </div>
+
+    <div class="risk-grid">
+      <div class="risk-card critical">
+        <p class="rc-title">AML / sanctions violations <span class="badge crit">CRITICAL</span></p>
+        <p class="rc-body">The single biggest driver of bank fines globally. Over $45bn since 2000 across HSBC, BNP Paribas, Standard Chartered, TD Bank, Commerzbank. US DoJ leads (59% of AML value); FCA, DNB, AUSTRAC increasingly active. Iran, Russia, Cuba, Sudan the key sanction regimes.</p>
+        <p class="rc-fine">Key regulators: DoJ, OFAC, FinCEN, FCA, DNB, AUSTRAC</p>
+      </div>
+      <div class="risk-card critical">
+        <p class="rc-title">Benchmark / rate manipulation <span class="badge crit">CRITICAL</span></p>
+        <p class="rc-body">LIBOR, EURIBOR, FX, ISDAfix and commodity benchmarks. Coordinated trader misconduct across Deutsche Bank (£226.8m FCA), Barclays, UBS, RBS, Citi, JPMorgan. FCA, DoJ, CFTC and EU Commission all active. MAR/BMR now codify expected controls.</p>
+        <p class="rc-fine">Key regulators: FCA, CFTC, DoJ, EU Commission</p>
+      </div>
+      <div class="risk-card high">
+        <p class="rc-title">FX / market misconduct <span class="badge hi">HIGH</span></p>
+        <p class="rc-body">Cartel coordination in G10 FX spot, front-running, improper disclosure of client flow. "The Cartel" and "The Bankers Club" chat rooms. $11bn+ across Citi, JPM, Barclays, HSBC, RBS, UBS. MUFG's own FX investigation is ongoing and referenced in their 6-K filings.</p>
+        <p class="rc-fine">Key regulators: DoJ, CFTC, FCA, EU Commission</p>
+      </div>
+      <div class="risk-card high">
+        <p class="rc-title">Market abuse / insider trading <span class="badge hi">HIGH</span></p>
+        <p class="rc-body">Persistent FCA and SEC priority. MNPI leakage, front-running, improper wall-crossing, spoofing and layering. Equities, fixed income, derivatives. 32 insider trading SEC actions in FY2023 alone. FCA enforcement up 230% in value in 2024 vs 2023.</p>
+        <p class="rc-fine">Key regulators: FCA, SEC, ESMA NCAs, CFTC</p>
+      </div>
+      <div class="risk-card high">
+        <p class="rc-title">Regulatory reporting / transparency <span class="badge hi">HIGH</span></p>
+        <p class="rc-body">MiFID II trade and transaction reporting, EMIR, SFTR, Dodd-Frank swap reporting, CFTC recordkeeping. Widespread industry failures. CFTC alone $1.1bn in CMPs across 20 FIs for recordkeeping failings (FY2022–23). Off-channel comms $3.6bn across 100+ firms.</p>
+        <p class="rc-fine">Key regulators: FCA, ESMA, CFTC, SEC</p>
+      </div>
+      <div class="risk-card medium">
+        <p class="rc-title">Consumer / mortgage / conduct <span class="badge med">MEDIUM</span></p>
+        <p class="rc-body">MBS misselling ($40bn+, US-focused), PPI UK, fee deception (MUFG Union Bank $15m OCC fine 2023), unsuitable products. Consumer Duty (UK 2023) raises expectations. Less relevant for a wholesale IB but material for MUFG's retail and wealth arms.</p>
+        <p class="rc-fine">Key regulators: OCC, FCA, CFPB, FINRA</p>
+      </div>
+      <div class="risk-card medium">
+        <p class="rc-title">Operational / cyber / resilience <span class="badge med">MEDIUM</span></p>
+        <p class="rc-body">DORA (EU, 2025), FCA/PRA operational resilience rules. Third-party risk concentration, outsourcing failures, IT outages. Growing enforcement focus. BoE/FCA systemic designation rules apply to MUFG as a G-SIB and UK-regulated entity.</p>
+        <p class="rc-fine">Key regulators: PRA, FCA, DORA (ESMA/EBA/EIOPA)</p>
+      </div>
+      <div class="risk-card low">
+        <p class="rc-title">Tax / transfer pricing evasion <span class="badge lo">LOW–MED</span></p>
+        <p class="rc-body">Dividend stripping (cum-ex), structured tax schemes, Luxembourg/Ireland tax optimization products. French DoJ and BaFin increasingly active in 2025. Cross-border structures through MUFG's Luxembourg entity and Japan trust banking arms carry latent exposure.</p>
+        <p class="rc-fine">Key regulators: HMRC, French PNF, DoJ, German BaFin</p>
+      </div>
+    </div>
+    <p class="source-note">Sources: Fenergo AML penalty data (2000–2025); FCA enforcement notices; CFTC/SEC press releases; Financial Crime News 21st century AML/sanctions analysis; Skillcast FCA fines database.</p>
+  </div>
+
+  <!-- PANEL 2: MUFG 5 years -->
+  <div id="p5" class="panel">
+    <p class="section-label">MUFG-specific enforcement risk — 2021 to 2026 (last 5 years)</p>
+    <div class="metric-row">
+      <div class="metric"><p class="m-label">Confirmed fines (5yr)</p><p class="m-val">~$28m</p><p class="m-sub">SEC $9.8m + FSA ¥3.15m + OCC $15m</p></div>
+      <div class="metric"><p class="m-label">Ongoing FX investigation</p><p class="m-val">Open</p><p class="m-sub">Referenced in 6-K / 20-F filings</p></div>
+      <div class="metric"><p class="m-label">FCA/PRA enforcement risk</p><p class="m-val">Elevated</p><p class="m-sub">EMEA securities platform in scope</p></div>
+      <div class="metric"><p class="m-label">Regulatory scrutiny trend</p><p class="m-val">Rising</p><p class="m-sub">Japan FSA + US dual-track active</p></div>
+    </div>
+
+    <div style="position: relative; width: 100%; height: 260px; margin-bottom: 1.5rem;">
+      <canvas id="chartMufg" role="img" aria-label="Radar chart of MUFG risk scores by category over last 5 years">Information barriers 9, Regulatory reporting 8, FX market conduct 7, Sanctions compliance 6, Recordkeeping off-channel 7, Client data handling 8, Supervisory transparency 7, AML controls 5.</canvas>
+    </div>
+
+    <div class="risk-grid">
+      <div class="risk-card critical">
+        <p class="rc-title">Information barrier / MNPI failures <span class="badge crit">TOP RISK</span></p>
+        <p class="rc-body">Evidenced directly: Japan FSA found 26+ instances of improper client information sharing between MUFG Bank and MUMSS/MSMS (Jun 2024). Structural conflict between banking and securities JV (Morgan Stanley alliance) makes this endemic. MUFG Bank seeking underwriting business for its brokerage arm — a classic MNPI/Chinese wall violation.</p>
+        <p class="rc-fine">Regulator: Japan FSA/SESC — Business improvement orders, Jun 2024</p>
+      </div>
+      <div class="risk-card critical">
+        <p class="rc-title">Regulatory reporting / substituted compliance <span class="badge crit">TOP RISK</span></p>
+        <p class="rc-body">MUFG Securities EMEA fined $9.8m (SEC, Aug 2025) for 3+ years of recordkeeping, capital reporting, financial reporting and internal supervision failures as an SBSD. The firm submitted post-hoc records after an enforcement investigation began. Fabricated compliance attestations. Highly relevant to MUFG EMEA's cross-border swap book and reporting obligations.</p>
+        <p class="rc-fine">Regulator: SEC — $9.8m fine, Aug 2025</p>
+      </div>
+      <div class="risk-card high">
+        <p class="rc-title">FX market conduct / coordination <span class="badge hi">HIGH</span></p>
+        <p class="rc-body">MUFG's own 20-F and 6-K filings confirm "some investigations into foreign exchange related practices resulted in our payment of monetary penalties." Investigation described as ongoing and subject to potential additional regulatory actions. MUFG's global FX franchise spans bank, securities EMEA/Americas — all in scope.</p>
+        <p class="rc-fine">Regulators: DoJ, CFTC — investigation ongoing per filings</p>
+      </div>
+      <div class="risk-card high">
+        <p class="rc-title">Client data & confidentiality <span class="badge hi">HIGH</span></p>
+        <p class="rc-body">Japan FSA enforcement (Jun 2024) was specifically about misuse of confidential client data to win business. This touches GDPR (EU entities), UK GDPR, Japan's APPI and MiFID II client confidentiality obligations simultaneously. Especially acute where MUFG Bank, MUMSS and MUFG EMEA share client universe across jurisdictions.</p>
+        <p class="rc-fine">Regulators: Japan FSA, FCA, FSMA/EU privacy regulators</p>
+      </div>
+      <div class="risk-card high">
+        <p class="rc-title">OFAC / sanctions compliance <span class="badge hi">HIGH</span></p>
+        <p class="rc-body">Historical: MUFG paid $565m in NYDFS sanctions fines (2013–14) for Iran/Sudan wire-stripping. OCC Consent Order (Nov 2017) and OCC C&D (Feb 2019) both OFAC/BSA-driven. As a G-SIB with large USD clearing, Southeast Asian affiliate network (Thailand, Indonesia, Philippines, Vietnam), and Japan-headquartered ownership, sanctions exposure remains structurally elevated.</p>
+        <p class="rc-fine">Regulators: OFAC, OCC, NYDFS — historical; latent risk ongoing</p>
+      </div>
+      <div class="risk-card high">
+        <p class="rc-title">Supervisory transparency / regulator communication <span class="badge hi">HIGH</span></p>
+        <p class="rc-body">PRA fined MUFG £26.8m (2017) for failing to notify the PRA of DFS settlement discussions. SEC enforcement (2025) found MUFG admitted non-compliance, provided inaccurate records, then fabricated post-hoc records after investigation began. Two separate instances across different entities of poor regulator candour — a pattern risk.</p>
+        <p class="rc-fine">Regulators: PRA (2017), SEC (2025)</p>
+      </div>
+      <div class="risk-card medium">
+        <p class="rc-title">Off-channel communications <span class="badge med">MEDIUM</span></p>
+        <p class="rc-body">Industry-wide SEC/CFTC sweep has caught 100+ firms. MUFG Securities Americas was designated a Primary Dealer in Jan 2026 — increasing its regulatory profile for CFTC and FINRA comms surveillance. No confirmed MUFG-specific fine yet in this wave, but the risk profile of its US broker-dealer and EMEA swap dealer makes it a candidate.</p>
+        <p class="rc-fine">Regulators: SEC, CFTC, FCA — industry sweep active</p>
+      </div>
+      <div class="risk-card medium">
+        <p class="rc-title">Spoofing / algorithmic market manipulation <span class="badge med">MEDIUM</span></p>
+        <p class="rc-body">CFTC fined BTMU $600k for spoofing of Treasury futures / Eurodollar futures (Aug 2017) — self-reported. MUFG Securities Americas now a Primary Dealer in USTs (Jan 2026), increasing its CFTC surveillance footprint. Fixed income, rates and repo flows across MUFG Bank treasury and the securities entities create latent spoofing/layering risk.</p>
+        <p class="rc-fine">Regulators: CFTC, SEC — heightened given Primary Dealer status</p>
+      </div>
+    </div>
+    <p class="source-note">Sources: MUFG 20-F FY2024 / 6-K (2024); SEC Release 34-103646 (Aug 2025); Japan FSA orders (Jun 2024); OCC enforcement actions (2019); MUFG SBSE-A/A SEC filings (2024); Steel-Eye enforcement tracker.</p>
+  </div>
+
+  <!-- PANEL 3: Heat Map -->
+  <div id="pheat" class="panel">
+    <p class="section-label">MUFG regulatory risk heat map — likelihood vs. impact (5yr horizon)</p>
+    <div class="two-col" style="margin-bottom: 1rem;">
+      <div>
+        <p style="font-size: 12px; color: var(--color-text-secondary); margin: 0 0 8px;">Likelihood →  (1 = rare, 5 = almost certain)</p>
+        <p style="font-size: 12px; color: var(--color-text-secondary); margin: 0 0 6px;">Impact ↑  (1 = minimal, 5 = severe / reputational)</p>
+        <div style="display: grid; grid-template-columns: 24px 1fr; gap: 4px; align-items: center;">
+          <div style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: 10px; color: var(--color-text-tertiary); text-align: center; grid-row: 1 / 7;">Impact</div>
+          <div>
+            <div class="heat-grid">
+              <div class="heat-cell h3">Info barriers<br><span style="font-size:9px">5 × 5</span></div>
+              <div class="heat-cell h3">FX conduct<br><span style="font-size:9px">4 × 5</span></div>
+              <div class="heat-cell h4">Reg reporting<br><span style="font-size:9px">5 × 4</span></div>
+              <div class="heat-cell h4">OFAC / sanctions<br><span style="font-size:9px">3 × 5</span></div>
+              <div class="heat-cell h2">AML controls<br><span style="font-size:9px">3 × 4</span></div>
+              <div class="heat-cell h4">Spoofing / algos<br><span style="font-size:9px">3 × 4</span></div>
+              <div class="heat-cell h3">Client data<br><span style="font-size:9px">4 × 4</span></div>
+              <div class="heat-cell h2">Off-channel comms<br><span style="font-size:9px">4 × 3</span></div>
+              <div class="heat-cell h2">Regulator candour<br><span style="font-size:9px">2 × 4</span></div>
+              <div class="heat-cell h1">Tax / transfer<br><span style="font-size:9px">2 × 3</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <p style="font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin: 0 0 10px;">Heat map legend</p>
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 14px; height: 14px; border-radius: 3px; background: #F7C1C1; flex-shrink: 0;"></div><span style="font-size: 12px; color: var(--color-text-secondary);">Score 20–25: Critical — enforcement likely, potential business disruption</span></div>
+          <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 14px; height: 14px; border-radius: 3px; background: #FAC775; flex-shrink: 0;"></div><span style="font-size: 12px; color: var(--color-text-secondary);">Score 12–19: High — material fine risk, regulatory notice likely</span></div>
+          <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 14px; height: 14px; border-radius: 3px; background: #FAF0B4; flex-shrink: 0;"></div><span style="font-size: 12px; color: var(--color-text-secondary);">Score 8–11: Medium — requires active monitoring and controls review</span></div>
+          <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 14px; height: 14px; border-radius: 3px; background: #C0DD97; flex-shrink: 0;"></div><span style="font-size: 12px; color: var(--color-text-secondary);">Score 4–7: Low — residual / emerging, quarterly review sufficient</span></div>
+          <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 14px; height: 14px; border-radius: 3px; background: #D3D1C7; flex-shrink: 0;"></div><span style="font-size: 12px; color: var(--color-text-secondary);">Score 1–3: Minimal — stable, standard controls adequate</span></div>
+        </div>
+        <div style="border-top: 0.5px solid var(--color-border-tertiary); margin-top: 12px; padding-top: 10px;">
+          <p style="font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin: 0 0 6px;">MUFG structural amplifiers</p>
+          <p style="font-size: 11px; color: var(--color-text-secondary); margin: 0; line-height: 1.6;">G-SIB status, multi-jurisdictional presence (Japan, UK, US, EU, ASEAN), Morgan Stanley JV conflict vectors, bank-securities boundary spanning, trust banking / custody / asset management convergence, and Primary Dealer designation in the US all elevate base risk scores vs. a pure securities house.</p>
+        </div>
+      </div>
+    </div>
+    <p class="source-note">Risk scores are qualitative assessments based on enforcement frequency, fine magnitude, MUFG entity structure, and current regulatory priority statements from FCA, PRA, CFTC, SEC, and Japan FSA (2021–2026).</p>
+  </div>
+
+  <!-- PANEL 4: Risk by Entity -->
+  <div id="pentity" class="panel">
+    <p class="section-label">Risk allocation by MUFG entity — surveillance relevance ranked</p>
+    <table class="entity-table">
+      <thead>
+        <tr>
+          <th style="width:22%">Entity</th>
+          <th style="width:12%">Risk level</th>
+          <th style="width:32%">Primary risk vectors</th>
+          <th style="width:34%">Key enforcement basis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>MUFG Securities EMEA plc</td>
+          <td><span class="pill p-crit">Critical</span></td>
+          <td>Regulatory reporting, SBSD compliance, off-channel comms, market abuse, FX conduct, info barriers</td>
+          <td>SEC $9.8m (Aug 2025) — substituted compliance; PRA £26.8m (2017) — regulator transparency</td>
+        </tr>
+        <tr>
+          <td>MUFG Bank, Ltd.</td>
+          <td><span class="pill p-crit">Critical</span></td>
+          <td>Sanctions / OFAC, AML/BSA, FX conduct, info barriers, client data misuse, USD clearing</td>
+          <td>NYDFS $565m (2013–14); OCC Consent Orders (2017, 2019); Japan FSA orders (Jun 2024)</td>
+        </tr>
+        <tr>
+          <td>MUMSS / MSMS (Japan JVs)</td>
+          <td><span class="pill p-hi">High</span></td>
+          <td>Information barriers (Morgan Stanley wall), MNPI, securities sales conduct, research conflicts</td>
+          <td>Japan FSA business improvement order (Jun 2024) — $1.4m MUMMS penalty; SESC investigation</td>
+        </tr>
+        <tr>
+          <td>MUFG Securities Americas Inc.</td>
+          <td><span class="pill p-hi">High</span></td>
+          <td>UST / repo spoofing, off-channel comms, CFTC swap reporting, market abuse (Primary Dealer)</td>
+          <td>CFTC spoofing (BTMU, 2017 — self-reported); elevated since Primary Dealer designation Jan 2026</td>
+        </tr>
+        <tr>
+          <td>MUFG Asset Management / First Sentier</td>
+          <td><span class="pill p-hi">High</span></td>
+          <td>Front-running, personal account dealing, buy-side info barriers, ESG / greenwashing, allocation fairness</td>
+          <td>No direct fine (5yr) but FCA buy-side market abuse / personal dealing is an active supervisory focus</td>
+        </tr>
+        <tr>
+          <td>MUFG Investor Services</td>
+          <td><span class="pill p-med">Medium</span></td>
+          <td>NAV / valuation accuracy, AML on fund investors, custody segregation, DORA resilience</td>
+          <td>$1.28tn AUA / $670bn AUC scale creates systemic risk profile; CSSF Luxembourg supervision</td>
+        </tr>
+        <tr>
+          <td>MUFG Bank Europe N.V.</td>
+          <td><span class="pill p-med">Medium</span></td>
+          <td>EU EMIR reporting, ECB/DNB AML supervision, MiFID II, sanctions (EU Russia perimeter)</td>
+          <td>EU Russia sanctions perimeter; DNB is an increasingly active AML enforcer (Rabobank $12m, 2023)</td>
+        </tr>
+        <tr>
+          <td>Krungsri / Bank Danamon / VietinBank</td>
+          <td><span class="pill p-med">Medium</span></td>
+          <td>Cross-border AML, ASEAN correspondent banking, USD clearing, group-wide sanctions exposure</td>
+          <td>MAS Singapore intensifying AML post-2023 money laundering scandal; ASEAN corridor risk</td>
+        </tr>
+        <tr>
+          <td>MUFG eSmart Securities</td>
+          <td><span class="pill p-lo">Low–Med</span></td>
+          <td>Retail order manipulation, spoofing, wash trades, market abuse by retail clients</td>
+          <td>Japan FSA retail investor conduct framework; online brokerage surveillance risk increasing</td>
+        </tr>
+        <tr>
+          <td>Morgan Stanley (strategic affiliate)</td>
+          <td><span class="pill p-lo">Low–Med</span></td>
+          <td>Shared client base conflicts, JV MNPI, information flow management between group entities</td>
+          <td>Not fined as MUFG entity but JV structure creates ongoing wall-management surveillance risk</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="source-note">Risk levels reflect surveillance-relevant enforcement probability based on entity function, historical fines, current regulatory supervisory statements, and MUFG's confirmed enforcement history (2005–2026). Not investment or legal advice.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const textCol = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
+const gridCol = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+
+new Chart(document.getElementById('chart20'), {
+  type: 'bar',
+  data: {
+    labels: ['AML / sanctions','MBS / consumer','LIBOR / benchmark','FX manipulation','Market abuse','Off-channel comms','Operational / cyber','Tax / other'],
+    datasets: [{
+      label: 'Estimated global fines ($bn)',
+      data: [45.7, 40, 12, 11, 8, 3.6, 4, 2.5],
+      backgroundColor: ['#E24B4A','#BA7517','#E24B4A','#BA7517','#378ADD','#185FA5','#639922','#5F5E5A'],
+      borderRadius: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' $' + ctx.parsed.y + 'bn estimated' } } },
+    scales: {
+      x: { ticks: { color: textCol, font: { size: 11 }, autoSkip: false, maxRotation: 30 }, grid: { color: gridCol } },
+      y: { ticks: { color: textCol, font: { size: 11 }, callback: v => '$' + v + 'bn' }, grid: { color: gridCol }, title: { display: true, text: 'Approx. global fines ($bn)', color: textCol, font: { size: 11 } } }
+    }
+  }
+});
+
+new Chart(document.getElementById('chartMufg'), {
+  type: 'radar',
+  data: {
+    labels: ['Info barriers / MNPI','Reg reporting','FX conduct','Sanctions / OFAC','Client data','Supervisory candour','Off-channel comms','Spoofing / algos','AML controls'],
+    datasets: [
+      { label: 'MUFG inherent risk', data: [9, 8, 7, 6, 8, 7, 6, 6, 5], borderColor: '#E24B4A', backgroundColor: 'rgba(226,75,74,0.12)', pointBackgroundColor: '#E24B4A', pointRadius: 4, borderWidth: 2 },
+      { label: 'Global IB benchmark', data: [6, 7, 8, 7, 5, 5, 8, 5, 7], borderColor: '#378ADD', backgroundColor: 'rgba(55,138,221,0.08)', pointBackgroundColor: '#378ADD', pointRadius: 3, borderWidth: 1.5, borderDash: [4,3] }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { r: { min: 0, max: 10, ticks: { color: textCol, font: { size: 10 }, stepSize: 2, backdropColor: 'transparent' }, grid: { color: gridCol }, pointLabels: { color: textCol, font: { size: 11 } } } }
+  }
+});
+</script>
